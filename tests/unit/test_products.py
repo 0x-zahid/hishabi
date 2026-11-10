@@ -13,14 +13,12 @@ from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 import pytest
 from pydantic import ValidationError
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.orm import Session
 
 from app.api.v1.auth import Role, User, router as auth_router
 from app.api.v1.categories import Category, router as categories_router
 from app.api.v1.products import Product, router as products_router
-from app.core.database import Base, get_db
+from app.core.database import get_db
 from app.schemas.category import (
     CategoryCreate,
     CategoryListOut,
@@ -169,24 +167,6 @@ def test_category_list_shape():
 # ---------------------------------------------------------------------------
 # 2. Integration Fixtures
 # ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def test_db_session():
-    """Create in-memory SQLite database session with all tables."""
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    Base.metadata.create_all(bind=engine)
-    session_factory = sessionmaker(bind=engine, autocommit=False, autoflush=False)
-    db = session_factory()
-    try:
-        yield db
-    finally:
-        db.close()
-        Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture

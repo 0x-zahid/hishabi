@@ -125,7 +125,7 @@ def create_product(
     Staff and Owners can create products.
     """
     role_name = _get_role_name(current_user, db)
-    if role_name and role_name not in ["owner", "admin", "staff"]:
+    if role_name not in ["owner", "admin", "staff"]:
         return _api_error(
             status.HTTP_403_FORBIDDEN,
             "FORBIDDEN",
@@ -231,7 +231,7 @@ def update_product(
 ):
     """Update product details. Staff and Owners can edit products."""
     role_name = _get_role_name(current_user, db)
-    if role_name and role_name not in ["owner", "admin", "staff"]:
+    if role_name not in ["owner", "admin", "staff"]:
         return _api_error(
             status.HTTP_403_FORBIDDEN,
             "FORBIDDEN",

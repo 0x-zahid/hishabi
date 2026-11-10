@@ -5,21 +5,12 @@ Settings are loaded from environment variables and a local ``.env`` file via
 ``Settings`` directly, so every module observes the same values.
 """
 
+import json
 from functools import lru_cache
 from typing import Annotated
 
-from pydantic import BeforeValidator
-from pydantic_settings import BaseSettings, SettingsConfigDict
-
-
-def _split_csv(value: object) -> object:
-    """Split a comma-separated environment string into a list of trimmed items."""
-    if isinstance(value, str):
-        return [item.strip() for item in value.split(",") if item.strip()]
-    return value
-
-
-CsvList = Annotated[list[str], BeforeValidator(_split_csv)]
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -44,7 +35,9 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # HTTP
-    CORS_ORIGINS: CsvList = ["http://localhost:5173"]
+    # NoDecode stops pydantic-settings from JSON-decoding the raw env value,
+    # so the validator below sees the string exactly as it was written.
+    CORS_ORIGINS: Annotated[list[str], NoDecode] = ["http://localhost:5173"]
 
     # AI provider
     AI_API_KEY: str = ""
@@ -53,6 +46,37 @@ class Settings(BaseSettings):
 
     # Domain
     DEFAULT_CURRENCY: str = "BDT"
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def _parse_cors_origins(cls, value: object) -> object:
+        """Accept CORS_ORIGINS as a JSON list or a plain comma-separated string.
+
+        ``NoDecode`` hands this validator the raw environment value, so both
+        supported spellings arrive here as text:
+
+        - a JSON list, e.g. ``["http://localhost:5173"]``
+        - a plain comma-separated string, e.g. ``http://localhost:5173``
+
+        A JSON list is decoded and its entries are trimmed. A plain string is
+        split on commas. Empty and whitespace-only segments are dropped, and an
+        entirely empty value yields an empty list.
+        """
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return []
+            if stripped.startswith("["):
+                try:
+                    decoded = json.loads(stripped)
+                except json.JSONDecodeError:
+                    decoded = None
+                if isinstance(decoded, list):
+                    return [str(item).strip() for item in decoded if str(item).strip()]
+            return [item.strip() for item in stripped.split(",") if item.strip()]
+        if isinstance(value, (list, tuple)):
+            return [str(item).strip() for item in value if str(item).strip()]
+        return value
 
 
 @lru_cache

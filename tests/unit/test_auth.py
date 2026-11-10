@@ -18,14 +18,12 @@ from fastapi.testclient import TestClient
 from jose import jwt
 import pytest
 from pydantic import ValidationError
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.orm import Session
 
 from app.api.v1.auth import User, decode_token, router as auth_router
 from app.api.v1.users import router as users_router
 from app.core.config import settings
-from app.core.database import Base, get_db
+from app.core.database import get_db
 from app.schemas.auth import (
     LoginRequest,
     LogoutResponse,
@@ -165,24 +163,6 @@ def test_admin_update_rules():
 # ---------------------------------------------------------------------------
 # 2. Endpoint Integration Fixtures
 # ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def test_db_session():
-    """Create a pristine in-memory SQLite database session for endpoint testing."""
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    Base.metadata.create_all(bind=engine)
-    session_factory = sessionmaker(bind=engine, autocommit=False, autoflush=False)
-    db = session_factory()
-    try:
-        yield db
-    finally:
-        db.close()
-        Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture

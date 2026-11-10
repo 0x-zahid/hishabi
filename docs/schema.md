@@ -91,7 +91,7 @@ recording who changed what.
 | `id` | `INTEGER` | NO | identity | PK | Primary key |
 | `product_id` | `INTEGER` | YES | NULL | FK → `products.id` | Affected product |
 | `user_id` | `INTEGER` | YES | NULL | FK → `users.id` | User who made the movement |
-| `movement_type` | `VARCHAR(20)` | YES | NULL | — | `in`, `out`, or `adjust` |
+| `movement_type` | `VARCHAR(20)` | YES | NULL | — | `purchase`, `sale`, `return`, or `adjustment` |
 | `quantity` | `NUMERIC(12,3)` | NO | — | — | Quantity moved; sign carried by `movement_type` |
 | `balance_after` | `NUMERIC(12,3)` | YES | NULL | — | Stock level after the movement |
 | `reference_type` | `VARCHAR(20)` | YES | NULL | — | Kind of related record, e.g. `purchase`, `sale` |
@@ -251,6 +251,22 @@ validated in the Pydantic layer with `Literal` types, which return a `422` befor
 reached. Native Postgres `ENUM` types are avoided: `ALTER TYPE ... ADD VALUE` cannot run inside a
 transaction on older PostgreSQL versions and Alembic's autogenerate does not detect added enum
 values, producing silent schema drift.
+
+### 7.5 Stock movement direction
+
+`stock_movements.movement_type` carries the business reason for the movement, and
+the direction of the change follows from it:
+
+| `movement_type` | Effect on `current_stock` | `quantity` sign |
+|---|---|---|
+| `purchase` | increases | must be positive |
+| `return` | increases — goods coming back from a customer | must be positive |
+| `sale` | decreases | must be positive |
+| `adjustment` | depends | signed: negative decreases, positive increases |
+
+An `adjustment` is the only movement that may carry a negative quantity, and
+only an owner may post one. A movement is rejected with a `400` when it would
+leave `current_stock` below zero.
 
 ---
 

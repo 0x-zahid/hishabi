@@ -16,9 +16,17 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-target_metadata = None
+from app.core.config import settings
+from app.core.database import Base
+
+# Importing the model package registers every table on Base.metadata, which is
+# what autogenerate compares against the live database.
+import app.models  # noqa: F401,E402
+
+target_metadata = Base.metadata
+
+# The connection string lives in the environment, never in alembic.ini.
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
