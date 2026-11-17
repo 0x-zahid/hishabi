@@ -15,11 +15,21 @@ from app.models.role import Role
 from app.models.stock_movement import StockMovement
 from app.models.user import User
 
+# Module 2 (Azaz): customers, suppliers and purchases.
+from app.models.customer import Customer
+from app.models.supplier import Supplier
+from app.models.purchase import Purchase
+from app.models.purchase_item import PurchaseItem
+
 __all__ = [
     "AuditLog",
     "Category",
+    "Customer",
     "Product",
+    "Purchase",
+    "PurchaseItem",
     "Role",
     "StockMovement",
+    "Supplier",
     "User",
 ]

@@ -10,8 +10,11 @@ from fastapi.responses import JSONResponse
 
 from app.api.v1.auth import router as auth_router
 from app.api.v1.categories import router as categories_router
+from app.api.v1.customers import router as customers_router
 from app.api.v1.products import router as products_router
+from app.api.v1.purchases import router as purchases_router
 from app.api.v1.stock import router as stock_router
+from app.api.v1.suppliers import router as suppliers_router
 from app.api.v1.users import router as users_router
 from app.core.config import settings
 
@@ -75,6 +78,10 @@ app.include_router(users_router)
 app.include_router(categories_router)
 app.include_router(products_router)
 app.include_router(stock_router)
+# Module 2 (Azaz): customers, suppliers and purchases.
+app.include_router(customers_router)
+app.include_router(suppliers_router)
+app.include_router(purchases_router)
 
 
 # ---------------------------------------------------------------------------
