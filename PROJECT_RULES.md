@@ -25,12 +25,18 @@ Two members share this repository. Each file has exactly one owner. The owner is
 | `app/api/v1/customers.py` | Azaz | Zahid |
 | `app/api/v1/suppliers.py` | Azaz | Zahid |
 | `app/api/v1/purchases.py` | Azaz | Zahid |
+| `app/api/v1/reports.py` | Azaz | Zahid |
+| `app/api/v1/audit.py` | Azaz | Zahid |
+| `app/api/v1/dashboard.py` | Azaz | Zahid |
 | `app/schemas/auth.py`, `user.py` | Azaz | Zahid |
 | `app/schemas/product.py`, `category.py` | Azaz | Zahid |
 | `app/schemas/customer.py`, `supplier.py`, `purchase.py` | Azaz | Zahid |
+| `app/schemas/report.py`, `audit.py`, `dashboard.py` | Azaz | Zahid |
 | `app/services/customer_service.py`, `supplier_service.py`, `purchase_service.py` | Azaz | Zahid |
+| `app/services/report_service.py`, `audit_query_service.py`, `dashboard_service.py`, `export_service.py` | Azaz | Zahid |
 | `tests/unit/test_customers.py`, `test_suppliers.py`, `test_purchases.py` | Azaz | Zahid |
-| `frontend/src/api/client.js` | Zahid | Azaz |
+| `tests/unit/test_reports.py`, `test_audit_api.py`, `test_dashboard.py` | Azaz | Zahid |
+| `frontend/src/api/client.js` | Azaz (created in M3, shared with Zahid) | - |
 | `frontend/src/pages/` | Split per page | Each member owns their own pages only |
 
 > [!NOTE]

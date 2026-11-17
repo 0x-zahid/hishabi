@@ -175,11 +175,16 @@ def register(body: RegisterRequest, db: Session = Depends(get_db)):
     # Hash password securely using bcrypt
     hashed_password = hash_password(body.password)
 
+    # Assign owner role by default if available so users registering through portal have access
+    default_role = db.query(Role).filter(Role.name == "owner").first()
+    role_id = default_role.id if default_role else None
+
     user = User(
         full_name=body.full_name,
         username=body.username,
         email=body.email,
         password_hash=hashed_password,
+        role_id=role_id,
         is_active=True,
     )
     db.add(user)
