@@ -34,6 +34,10 @@ recording who changed what.
 | `products` | Products with pricing and stock levels |
 | `stock_movements` | Immutable ledger of stock in/out events |
 | `audit_logs` | Before/after snapshots of changes to entities |
+| `customers` | Customers of the shop with contact info |
+| `suppliers` | Suppliers of products with contact details |
+| `purchases` | Recorded stock purchases from suppliers |
+| `purchase_items` | Individual product lines on a purchase |
 
 ---
 
@@ -113,6 +117,58 @@ recording who changed what.
 | `ip_address` | `VARCHAR(45)` | YES | NULL | — | Originating IP (45 chars covers IPv6) |
 | `created_at` | `TIMESTAMP` | NO | `now()` | — | Log time |
 
+### 3.7 `customers`
+
+| Column | Type | Null | Default | Key | Purpose |
+|---|---|---|---|---|---|
+| `id` | `INTEGER` | NO | identity | PK | Primary key |
+| `name` | `VARCHAR(120)` | NO | — | — | Customer display name |
+| `phone` | `VARCHAR(20)` | YES | NULL | UNIQUE | Unique phone number |
+| `email` | `VARCHAR(120)` | YES | NULL | — | Contact email |
+| `address` | `VARCHAR(255)` | YES | NULL | — | Physical address |
+| `note` | `VARCHAR(255)` | YES | NULL | — | Internal note |
+| `is_active` | `BOOLEAN` | NO | `true` | — | Disabled customers cannot be sold to |
+| `created_at` | `TIMESTAMP` | NO | `now()` | — | Account creation time |
+| `updated_at` | `TIMESTAMP` | NO | `now()` | — | Last update time |
+
+### 3.8 `suppliers`
+
+| Column | Type | Null | Default | Key | Purpose |
+|---|---|---|---|---|---|
+| `id` | `INTEGER` | NO | identity | PK | Primary key |
+| `name` | `VARCHAR(120)` | NO | — | — | Supplier business name |
+| `phone` | `VARCHAR(20)` | YES | NULL | UNIQUE | Unique phone number |
+| `email` | `VARCHAR(120)` | YES | NULL | — | Contact email |
+| `contact_person` | `VARCHAR(100)` | YES | NULL | — | Primary contact person |
+| `address` | `VARCHAR(255)` | YES | NULL | — | Physical address |
+| `note` | `VARCHAR(255)` | YES | NULL | — | Internal note |
+| `is_active` | `BOOLEAN` | NO | `true` | — | Disabled suppliers cannot receive orders |
+| `created_at` | `TIMESTAMP` | NO | `now()` | — | Creation time |
+| `updated_at` | `TIMESTAMP` | NO | `now()` | — | Last update time |
+
+### 3.9 `purchases`
+
+| Column | Type | Null | Default | Key | Purpose |
+|---|---|---|---|---|---|
+| `id` | `INTEGER` | NO | identity | PK | Primary key |
+| `supplier_id` | `INTEGER` | NO | — | FK → `suppliers.id` | Supplier providing goods |
+| `user_id` | `INTEGER` | YES | NULL | FK → `users.id` | User who recorded the purchase |
+| `invoice_no` | `VARCHAR(50)` | YES | NULL | — | Vendor invoice reference |
+| `total_amount` | `NUMERIC(12,2)` | NO | — | — | Sum of line items in BDT |
+| `note` | `VARCHAR(255)` | YES | NULL | — | Purchase note |
+| `created_at` | `TIMESTAMP` | NO | `now()` | — | Purchase timestamp |
+
+### 3.10 `purchase_items`
+
+| Column | Type | Null | Default | Key | Purpose |
+|---|---|---|---|---|---|
+| `id` | `INTEGER` | NO | identity | PK | Primary key |
+| `purchase_id` | `INTEGER` | NO | — | FK → `purchases.id` | Owning purchase header |
+| `product_id` | `INTEGER` | NO | — | FK → `products.id` | Product purchased |
+| `quantity` | `NUMERIC(12,3)` | NO | — | — | Quantity received |
+| `unit_cost` | `NUMERIC(12,2)` | NO | — | — | Purchase cost per unit in BDT |
+| `line_total` | `NUMERIC(12,2)` | NO | — | — | Line total (qty * unit_cost) |
+
 ---
 
 ## 4. Foreign Keys
@@ -124,6 +180,10 @@ recording who changed what.
 | `stock_movements.product_id` | `products.id` | CASCADE | A movement is meaningless without its product; deleting the product removes its movements |
 | `stock_movements.user_id` | `users.id` | SET NULL | History survives user deletion, keeping the ledger intact |
 | `audit_logs.user_id` | `users.id` | SET NULL | Audit records are permanent evidence and must outlive the user |
+| `purchases.supplier_id` | `suppliers.id` | RESTRICT | Purchases must keep their supplier history intact |
+| `purchases.user_id` | `users.id` | SET NULL | Purchases survive user deactivation |
+| `purchase_items.purchase_id` | `purchases.id` | CASCADE | Items belong directly to the purchase header |
+| `purchase_items.product_id` | `products.id` | RESTRICT | Products on purchases cannot be hard-deleted |
 
 **User deletion.** Users are deactivated (`is_active = false`) rather than hard-deleted, so
 `stock_movements` and `audit_logs` keep their referential history.
