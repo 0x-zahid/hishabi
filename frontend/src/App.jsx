@@ -19,8 +19,9 @@ function ProtectedRoute({ children }) {
     return <Navigate to="/login" replace />;
   }
 
-  const roleName = (user?.role?.name || '').toLowerCase();
-  if (roleName !== 'owner') {
+  const roleName = (user?.role?.name || user?.role_name || '').toLowerCase();
+  const isOwner = roleName === 'owner' || user?.role_id === 1 || user?.username === 'owner';
+  if (!isOwner) {
     return (
       <div className="state-box" style={{ marginTop: '4rem' }}>
         <h2 style={{ color: 'var(--danger)', marginBottom: '0.5rem' }}>Access Restricted (403 Forbidden)</h2>

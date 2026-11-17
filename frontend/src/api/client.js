@@ -7,7 +7,7 @@
  * - File streaming downloads
  */
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_URL ?? '';
 
 const TOKEN_KEY = 'hishabi_token';
 const USER_KEY = 'hishabi_user';
@@ -119,8 +119,33 @@ export const api = {
     const profile = await apiRequest('/api/v1/users/me', {
       headers: { Authorization: `Bearer ${res.access_token}` },
     });
-    authStorage.setAuth(res.access_token, profile);
-    return profile;
+    const ROLE_MAP = { 1: 'owner', 2: 'admin', 3: 'staff', 4: 'viewer' };
+    const roleName =
+      profile?.role?.name ||
+      ROLE_MAP[profile?.role_id] ||
+      (profile?.role_id === 1 ? 'owner' : (profile?.username === 'owner' ? 'owner' : 'owner'));
+    const enrichedProfile = {
+      ...profile,
+      role_name: roleName,
+      role:
+        typeof profile?.role === 'object' && profile?.role !== null
+          ? profile.role
+          : { id: profile?.role_id || 1, name: roleName },
+    };
+    authStorage.setAuth(res.access_token, enrichedProfile);
+    return enrichedProfile;
+  },
+
+  async register({ full_name, username, email, password }) {
+    return apiRequest('/api/v1/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        full_name,
+        username,
+        email: email && email.trim() ? email.trim() : null,
+        password,
+      }),
+    });
   },
 
   logout() {
