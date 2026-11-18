@@ -38,6 +38,9 @@ recording who changed what.
 | `suppliers` | Suppliers of products with contact details |
 | `purchases` | Recorded stock purchases from suppliers |
 | `purchase_items` | Individual product lines on a purchase |
+| `sales` | Recorded sales to customers or walk-in buyers |
+| `sale_items` | Individual product lines on a sale |
+| `payments` | Customer payments that settle an outstanding due |
 
 ---
 
@@ -169,6 +172,52 @@ recording who changed what.
 | `unit_cost` | `NUMERIC(12,2)` | NO | — | — | Purchase cost per unit in BDT |
 | `line_total` | `NUMERIC(12,2)` | NO | — | — | Line total (qty * unit_cost) |
 
+### 3.11 `sales`
+
+| Column | Type | Null | Default | Key | Purpose |
+|---|---|---|---|---|---|
+| `id` | `INTEGER` | NO | identity | PK | Primary key |
+| `customer_id` | `INTEGER` | YES | NULL | FK → `customers.id` | Customer sold to; NULL is a walk-in cash sale |
+| `user_id` | `INTEGER` | YES | NULL | FK → `users.id` | Staff or owner who recorded the sale |
+| `payment_type` | `VARCHAR(20)` | NO | — | — | `cash` or `credit` (CHECK constraint) |
+| `total_amount` | `NUMERIC(12,2)` | NO | — | — | Sum of line items in BDT, computed on the server |
+| `paid_amount` | `NUMERIC(12,2)` | NO | `0` | — | Amount received at the time of the sale |
+| `due_amount` | `NUMERIC(12,2)` | NO | `0` | — | `total_amount - paid_amount`, computed on the server |
+| `note` | `VARCHAR(255)` | YES | NULL | — | Sale note |
+| `created_at` | `TIMESTAMP` | NO | `now()` | — | Sale timestamp |
+
+### 3.12 `sale_items`
+
+| Column | Type | Null | Default | Key | Purpose |
+|---|---|---|---|---|---|
+| `id` | `INTEGER` | NO | identity | PK | Primary key |
+| `sale_id` | `INTEGER` | NO | — | FK → `sales.id` | Owning sale header |
+| `product_id` | `INTEGER` | NO | — | FK → `products.id` | Product sold |
+| `quantity` | `NUMERIC(12,3)` | NO | — | — | Quantity sold, must be > 0 |
+| `unit_price` | `NUMERIC(12,2)` | NO | — | — | Price per unit in BDT, defaults to the product's `sale_price` |
+| `line_total` | `NUMERIC(12,2)` | NO | — | — | Line total (qty * unit_price), rounded half-up |
+| `created_at` | `TIMESTAMP` | NO | `now()` | — | Line timestamp |
+
+### 3.13 `payments`
+
+| Column | Type | Null | Default | Key | Purpose |
+|---|---|---|---|---|---|
+| `id` | `INTEGER` | NO | identity | PK | Primary key |
+| `customer_id` | `INTEGER` | NO | — | FK → `customers.id` | Customer who made the payment |
+| `user_id` | `INTEGER` | YES | NULL | FK → `users.id` | Staff or owner who took the payment |
+| `sale_id` | `INTEGER` | YES | NULL | FK → `sales.id` | The credit sale this payment settles, when it is tied to one |
+| `amount` | `NUMERIC(12,2)` | NO | — | — | Amount received in BDT, must be > 0 |
+| `payment_method` | `VARCHAR(20)` | YES | NULL | — | `cash`, `bkash`, `nagad`, ... |
+| `note` | `VARCHAR(255)` | YES | NULL | — | Payment note |
+| `created_at` | `TIMESTAMP` | NO | `now()` | — | Payment timestamp |
+
+> [!NOTE]
+> A customer's outstanding due is **computed, never stored**: it is
+> `SUM(sales.due_amount WHERE payment_type = 'credit') - SUM(payments.amount)`,
+> queried from `app/services/dues_service.py`. The `customers` table therefore
+> has no due, balance or outstanding-amount column, so there is exactly one
+> source of truth.
+
 ---
 
 ## 4. Foreign Keys
@@ -184,6 +233,13 @@ recording who changed what.
 | `purchases.user_id` | `users.id` | SET NULL | Purchases survive user deactivation |
 | `purchase_items.purchase_id` | `purchases.id` | CASCADE | Items belong directly to the purchase header |
 | `purchase_items.product_id` | `products.id` | RESTRICT | Products on purchases cannot be hard-deleted |
+| `sales.customer_id` | `customers.id` | RESTRICT | Sales must keep their customer history intact |
+| `sales.user_id` | `users.id` | SET NULL | Sales survive user deactivation |
+| `sale_items.sale_id` | `sales.id` | CASCADE | Items belong directly to the sale header |
+| `sale_items.product_id` | `products.id` | RESTRICT | Products on sales cannot be hard-deleted |
+| `payments.customer_id` | `customers.id` | RESTRICT | Payments must keep their customer history intact |
+| `payments.user_id` | `users.id` | SET NULL | Payments survive user deactivation |
+| `payments.sale_id` | `sales.id` | SET NULL | A sale is never deleted, but a payment may outlive its reference |
 
 **User deletion.** Users are deactivated (`is_active = false`) rather than hard-deleted, so
 `stock_movements` and `audit_logs` keep their referential history.
@@ -222,6 +278,32 @@ These also create backing indexes.
 | `audit_logs` | `ix_audit_logs_created_at` | (`created_at`) | Time-range queries and recent-activity listings |
 | `audit_logs` | `ix_audit_logs_user_id` | (`user_id`) | FK column — audit trail for one user |
 | `audit_logs` | `ix_audit_logs_entity` | (`entity_type`, `entity_id`) | Looking up the history of a specific row |
+| `sales` | `ix_sales_customer_id` | (`customer_id`) | FK column — listing sales of one customer |
+| `sales` | `ix_sales_user_id` | (`user_id`) | FK column — sales recorded by a user |
+| `sales` | `ix_sales_created_at` | (`created_at`) | Time-range queries and recent-activity listings |
+| `sale_items` | `ix_sale_items_sale_id` | (`sale_id`) | FK column — the lines of one sale |
+| `sale_items` | `ix_sale_items_product_id` | (`product_id`) | FK column — sales history per product |
+| `payments` | `ix_payments_customer_id` | (`customer_id`) | FK column — payment history per customer |
+| `payments` | `ix_payments_user_id` | (`user_id`) | FK column — payments taken by a user |
+| `payments` | `ix_payments_sale_id` | (`sale_id`) | FK column — payments tied to one sale |
+| `payments` | `ix_payments_created_at` | (`created_at`) | Time-range queries and recent-activity listings |
+
+### 5.3 Check Constraints
+
+| Table | Constraint | Expression | Rationale |
+|---|---|---|---|
+| `purchases` | `ck_purchases_total_amount_non_negative` | `total_amount >= 0` | A purchase total cannot be negative |
+| `purchase_items` | `ck_purchase_items_quantity_positive` | `quantity > 0` | A line always carries a positive quantity |
+| `purchase_items` | `ck_purchase_items_unit_cost_non_negative` | `unit_cost >= 0` | A cost cannot be negative |
+| `purchase_items` | `ck_purchase_items_line_total_non_negative` | `line_total >= 0` | A line total cannot be negative |
+| `sales` | `ck_sales_payment_type_valid` | `payment_type IN ('cash','credit')` | Only two payment types exist |
+| `sales` | `ck_sales_total_amount_non_negative` | `total_amount >= 0` | A sale total cannot be negative |
+| `sales` | `ck_sales_paid_amount_non_negative` | `paid_amount >= 0` | A paid amount cannot be negative |
+| `sales` | `ck_sales_due_amount_non_negative` | `due_amount >= 0` | A due cannot be negative |
+| `sale_items` | `ck_sale_items_quantity_positive` | `quantity > 0` | A line always carries a positive quantity |
+| `sale_items` | `ck_sale_items_unit_price_non_negative` | `unit_price >= 0` | A price cannot be negative |
+| `sale_items` | `ck_sale_items_line_total_non_negative` | `line_total >= 0` | A line total cannot be negative |
+| `payments` | `ck_payments_amount_positive` | `amount > 0` | A payment always carries a positive amount |
 
 ---
 
@@ -233,6 +315,13 @@ categories  1 ── N  products
 products    1 ── N  stock_movements
 users       1 ── N  stock_movements
 users       1 ── N  audit_logs
+customers   1 ── N  sales
+customers   1 ── N  payments
+sales       1 ── N  sale_items
+sales       1 ── N  payments
+products    1 ── N  sale_items
+users       1 ── N  sales
+users       1 ── N  payments
 ```
 
 ---
@@ -371,3 +460,12 @@ specification was silent, and are recorded here so they can be reviewed and chan
    a FK is not possible; `entity_type` supplies the discriminator.
 7. **`stock_movements.balance_after` is denormalised.** It stores the stock level at the moment of
    the movement so a product's history can be reconstructed without recomputation.
+8. **The customer due is computed, never stored.** There is no due, balance or
+   outstanding-amount column on `customers`, on `sales` or on `payments`. The due is
+   `SUM(sales.due_amount WHERE payment_type = 'credit') - SUM(payments.amount)`, queried
+   from `app/services/dues_service.py` every time it is needed. A cached column could
+   drift from the ledger; a computed value cannot.
+9. **Sales and payments are immutable.** A recorded sale or payment is never updated or
+   deleted. A mistake is corrected with a new reversing entry, so the ledger always shows
+   what actually happened. `sale_items.sale_id` therefore uses `ON DELETE CASCADE` for the
+   table's own integrity, not as a business rule to remove sale lines.
