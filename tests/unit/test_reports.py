@@ -20,6 +20,8 @@ from app.core.security import hash_password
 from app.models.customer import Customer
 from app.models.product import Product
 from app.models.role import Role
+from app.models.sale import Sale
+from app.models.sale_item import SaleItem
 from app.models.stock_movement import StockMovement
 from app.models.user import User
 
@@ -129,6 +131,55 @@ def _seed_products_and_sales(db: Session, target_date: date):
         created_at=dt,
     )
     db.add_all([m1, m2])
+
+    # The same two sales as real ``sales`` / ``sale_items`` rows.
+    #
+    # ``app/services/report_service.py`` reads the ``sales`` and ``sale_items``
+    # tables whenever they exist in the metadata and only falls back to the
+    # ``stock_movements`` derivation when they do not. Now that Zahid's module
+    # is merged, the report queries the real tables, so the seed has to write
+    # the real tables as well.
+    s1 = Sale(
+        customer_id=None,
+        user_id=None,
+        payment_type="cash",
+        total_amount=Decimal("500.00"),
+        paid_amount=Decimal("500.00"),
+        due_amount=Decimal("0.00"),
+        created_at=dt,
+    )
+    db.add(s1)
+    db.flush()
+    s1.items.append(
+        SaleItem(
+            product_id=p1.id,
+            quantity=Decimal("5.000"),
+            unit_price=Decimal("100.00"),
+            line_total=Decimal("500.00"),
+            created_at=dt,
+        )
+    )
+    s2 = Sale(
+        customer_id=None,
+        user_id=None,
+        payment_type="cash",
+        total_amount=Decimal("360.00"),
+        paid_amount=Decimal("360.00"),
+        due_amount=Decimal("0.00"),
+        created_at=dt,
+    )
+    db.add(s2)
+    db.flush()
+    s2.items.append(
+        SaleItem(
+            product_id=p2.id,
+            quantity=Decimal("2.000"),
+            unit_price=Decimal("180.00"),
+            line_total=Decimal("360.00"),
+            created_at=dt,
+        )
+    )
+
     db.commit()
     return p1, p2
 

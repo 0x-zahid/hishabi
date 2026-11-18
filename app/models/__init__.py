@@ -21,14 +21,22 @@ from app.models.supplier import Supplier
 from app.models.purchase import Purchase
 from app.models.purchase_item import PurchaseItem
 
+# Module 2 (Zahid): sales, sale items and customer payments.
+from app.models.sale import Sale
+from app.models.sale_item import SaleItem
+from app.models.payment import Payment
+
 __all__ = [
     "AuditLog",
     "Category",
     "Customer",
+    "Payment",
     "Product",
     "Purchase",
     "PurchaseItem",
     "Role",
+    "Sale",
+    "SaleItem",
     "StockMovement",
     "Supplier",
     "User",

@@ -11,11 +11,14 @@ from fastapi.responses import JSONResponse
 from app.api.v1.auth import router as auth_router
 from app.api.v1.audit import router as audit_router
 from app.api.v1.categories import router as categories_router
+from app.api.v1.customer_dues import router as customer_dues_router
 from app.api.v1.customers import router as customers_router
 from app.api.v1.dashboard import router as dashboard_router
+from app.api.v1.payments import router as payments_router
 from app.api.v1.products import router as products_router
 from app.api.v1.purchases import router as purchases_router
 from app.api.v1.reports import router as reports_router
+from app.api.v1.sales import router as sales_router
 from app.api.v1.stock import router as stock_router
 from app.api.v1.suppliers import router as suppliers_router
 from app.api.v1.users import router as users_router
@@ -81,6 +84,13 @@ app.include_router(users_router)
 app.include_router(categories_router)
 app.include_router(products_router)
 app.include_router(stock_router)
+# Module 2 (Zahid): sales, sale items and customer payments.
+app.include_router(sales_router)
+app.include_router(payments_router)
+# The due routes share the /api/v1/customers prefix, so they are registered
+# before the customers router: Starlette matches in order and the customers
+# router owns a catch-all GET /{customer_id} that would swallow GET /due.
+app.include_router(customer_dues_router)
 # Module 2 (Azaz): customers, suppliers and purchases.
 app.include_router(customers_router)
 app.include_router(suppliers_router)
