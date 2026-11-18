@@ -3,6 +3,9 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import ProductsPage from './pages/ProductsPage';
+import CustomersPage from './pages/CustomersPage';
+import PurchasesPage from './pages/PurchasesPage';
 import ReportsPage from './pages/ReportsPage';
 import AuditLogPage from './pages/AuditLogPage';
 import { authStorage } from './api/client';
@@ -59,6 +62,33 @@ export default function App() {
           element={
             <ProtectedRoute>
               <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/products"
+          element={
+            <ProtectedRoute>
+              <ProductsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/customers"
+          element={
+            <ProtectedRoute>
+              <CustomersPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/purchases"
+          element={
+            <ProtectedRoute>
+              <PurchasesPage />
             </ProtectedRoute>
           }
         />

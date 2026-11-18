@@ -198,4 +198,143 @@ export const api = {
   getAuditDetail(id) {
     return apiRequest(`/api/v1/audit/${id}`);
   },
+
+  // Products
+  getProducts(params = {}) {
+    const clean = {};
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') clean[k] = v;
+    });
+    const qs = new URLSearchParams(clean).toString();
+    return apiRequest(`/api/v1/products${qs ? `?${qs}` : ''}`);
+  },
+
+  getProduct(id) {
+    return apiRequest(`/api/v1/products/${id}`);
+  },
+
+  createProduct(data) {
+    return apiRequest('/api/v1/products', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateProduct(id, data) {
+    return apiRequest(`/api/v1/products/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteProduct(id) {
+    return apiRequest(`/api/v1/products/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Categories
+  getCategories() {
+    return apiRequest('/api/v1/categories');
+  },
+
+  createCategory(data) {
+    return apiRequest('/api/v1/categories', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Customers
+  getCustomers(params = {}) {
+    const clean = {};
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') clean[k] = v;
+    });
+    const qs = new URLSearchParams(clean).toString();
+    return apiRequest(`/api/v1/customers${qs ? `?${qs}` : ''}`);
+  },
+
+  getCustomer(id) {
+    return apiRequest(`/api/v1/customers/${id}`);
+  },
+
+  getCustomerHistory(id, limit = 20) {
+    return apiRequest(`/api/v1/customers/${id}/history?limit=${limit}`);
+  },
+
+  createCustomer(data) {
+    return apiRequest('/api/v1/customers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateCustomer(id, data) {
+    return apiRequest(`/api/v1/customers/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deactivateCustomer(id) {
+    return apiRequest(`/api/v1/customers/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Suppliers
+  getSuppliers(params = {}) {
+    const clean = {};
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') clean[k] = v;
+    });
+    const qs = new URLSearchParams(clean).toString();
+    return apiRequest(`/api/v1/suppliers${qs ? `?${qs}` : ''}`);
+  },
+
+  getSupplier(id) {
+    return apiRequest(`/api/v1/suppliers/${id}`);
+  },
+
+  createSupplier(data) {
+    return apiRequest('/api/v1/suppliers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateSupplier(id, data) {
+    return apiRequest(`/api/v1/suppliers/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deactivateSupplier(id) {
+    return apiRequest(`/api/v1/suppliers/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Purchases
+  getPurchases(params = {}) {
+    const clean = {};
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') clean[k] = v;
+    });
+    const qs = new URLSearchParams(clean).toString();
+    return apiRequest(`/api/v1/purchases${qs ? `?${qs}` : ''}`);
+  },
+
+  getPurchase(id) {
+    return apiRequest(`/api/v1/purchases/${id}`);
+  },
+
+  createPurchase(data) {
+    return apiRequest('/api/v1/purchases', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
 };

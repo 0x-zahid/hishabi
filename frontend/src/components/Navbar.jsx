@@ -21,6 +21,15 @@ export default function Navbar() {
         <NavLink to="/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}>
           Dashboard
         </NavLink>
+        <NavLink to="/products" className={({ isActive }) => (isActive ? 'active' : '')}>
+          Products
+        </NavLink>
+        <NavLink to="/customers" className={({ isActive }) => (isActive ? 'active' : '')}>
+          Customers
+        </NavLink>
+        <NavLink to="/purchases" className={({ isActive }) => (isActive ? 'active' : '')}>
+          Purchases
+        </NavLink>
         <NavLink to="/reports" className={({ isActive }) => (isActive ? 'active' : '')}>
           Reports
         </NavLink>
