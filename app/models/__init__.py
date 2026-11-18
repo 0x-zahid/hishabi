@@ -15,6 +15,9 @@ from app.models.role import Role
 from app.models.stock_movement import StockMovement
 from app.models.user import User
 
+# Module 3 (Zahid): AI request tracking.
+from app.models.ai_request_log import AIRequestLog
+
 # Module 2 (Azaz): customers, suppliers and purchases.
 from app.models.customer import Customer
 from app.models.supplier import Supplier
@@ -27,6 +30,7 @@ from app.models.sale_item import SaleItem
 from app.models.payment import Payment
 
 __all__ = [
+    "AIRequestLog",
     "AuditLog",
     "Category",
     "Customer",

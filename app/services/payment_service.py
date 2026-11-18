@@ -72,7 +72,7 @@ def _record_payment(
     amount = _money(body.amount)
     if amount <= 0:
         raise _error(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "INVALID_PAYMENT_AMOUNT",
             "The payment amount must be greater than zero.",
         )
@@ -93,7 +93,7 @@ def _record_payment(
         )
     if not customer.is_active:
         raise _error(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "CUSTOMER_INACTIVE",
             f"Customer '{customer.name}' is inactive and cannot make a payment.",
         )
@@ -110,7 +110,7 @@ def _record_payment(
             )
         if sale.customer_id != customer.id:
             raise _error(
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
                 "SALE_CUSTOMER_MISMATCH",
                 f"Sale #{sale.id} does not belong to customer '{customer.name}'.",
             )
@@ -119,7 +119,7 @@ def _record_payment(
     current_due = dues_service.get_customer_due(db, customer.id)
     if amount > current_due:
         raise _error(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "OVERPAYMENT_NOT_ALLOWED",
             f"The payment {amount} is larger than the outstanding due {current_due}.",
         )

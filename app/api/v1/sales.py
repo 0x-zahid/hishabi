@@ -85,7 +85,7 @@ def list_sales(
     """List sales newest first, optionally filtered."""
     if payment_type is not None and payment_type not in ("cash", "credit"):
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "code": "INVALID_PAYMENT_TYPE",
                 "message": "payment_type must be 'cash' or 'credit'.",

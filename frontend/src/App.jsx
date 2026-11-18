@@ -5,13 +5,19 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ReportsPage from './pages/ReportsPage';
 import AuditLogPage from './pages/AuditLogPage';
+import AIEntryPage from './pages/AIEntryPage';
 import { authStorage } from './api/client';
 import './App.css';
 
 /**
- * Protected Route Guard: Only lets authenticated Owners through
+ * Protected Route Guard.
+ *
+ * By default only Owners get through, which is what the dashboard, reports
+ * and audit log have always required. Pass `allow` to open a route to other
+ * roles: the AI entry page is also open to staff, because staff work the
+ * counter and record sales.
  */
-function ProtectedRoute({ children }) {
+function ProtectedRoute({ children, allow = ['owner'] }) {
   const token = authStorage.getToken();
   const user = authStorage.getUser();
 
@@ -21,11 +27,17 @@ function ProtectedRoute({ children }) {
 
   const roleName = (user?.role?.name || user?.role_name || '').toLowerCase();
   const isOwner = roleName === 'owner' || user?.role_id === 1 || user?.username === 'owner';
-  if (!isOwner) {
+  const allowed = allow.map((name) => name.toLowerCase());
+  const hasAccess = isOwner || allowed.includes(roleName);
+
+  if (!hasAccess) {
     return (
       <div className="state-box" style={{ marginTop: '4rem' }}>
         <h2 style={{ color: 'var(--danger)', marginBottom: '0.5rem' }}>Access Restricted (403 Forbidden)</h2>
-        <p>This management portal requires Owner permissions.</p>
+        <p>
+          This page requires {allowed.map((r) => r[0].toUpperCase() + r.slice(1)).join(' or ')}{' '}
+          permissions.
+        </p>
         <button
           onClick={() => {
             authStorage.clearAuth();
@@ -77,6 +89,15 @@ export default function App() {
           element={
             <ProtectedRoute>
               <AuditLogPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/ai"
+          element={
+            <ProtectedRoute allow={['owner', 'staff']}>
+              <AIEntryPage />
             </ProtectedRoute>
           }
         />

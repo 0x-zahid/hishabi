@@ -41,7 +41,7 @@ class Settings(BaseSettings):
 
     # AI provider
     AI_API_KEY: str = ""
-    AI_MODEL: str = "gpt-4o-mini"
+    AI_MODEL: str = "gemini-2.0-flash"
     AI_DAILY_LIMIT: int = 20
 
     # Domain
