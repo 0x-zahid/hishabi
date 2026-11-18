@@ -89,14 +89,14 @@ def _record_sale(
     # --- 1. Body validation (R1 - R4) ------------------------------------
     if not body.items:
         raise _error(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "INVALID_SALE_ITEMS",
             "A sale must contain at least one item.",
         )
 
     if body.payment_type not in (CASH, CREDIT):
         raise _error(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "INVALID_PAYMENT_TYPE",
             "payment_type must be 'cash' or 'credit'.",
         )
@@ -104,13 +104,13 @@ def _record_sale(
     for item in body.items:
         if item.quantity <= 0:
             raise _error(
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
                 "INVALID_QUANTITY",
                 f"Quantity for product {item.product_id} must be greater than zero.",
             )
         if item.unit_price is not None and item.unit_price < 0:
             raise _error(
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
                 "INVALID_UNIT_PRICE",
                 f"unit_price for product {item.product_id} cannot be negative.",
             )
@@ -127,14 +127,14 @@ def _record_sale(
             )
         if not customer.is_active:
             raise _error(
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
                 "CUSTOMER_INACTIVE",
                 f"Customer '{customer.name}' is inactive and cannot be sold to.",
             )
     elif body.payment_type == CREDIT:
         # A credit sale without a customer cannot be tracked.
         raise _error(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "CUSTOMER_REQUIRED",
             "A credit sale must name the customer it is sold to.",
         )
@@ -186,7 +186,7 @@ def _record_sale(
 
     if body.total_amount is not None and _money(body.total_amount) != total:
         raise _error(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "TOTAL_MISMATCH",
             f"total_amount {_money(body.total_amount)} does not match the sum of the "
             f"items, {total}.",
@@ -196,7 +196,7 @@ def _record_sale(
     if body.payment_type == CASH:
         if _money(body.paid_amount) != total:
             raise _error(
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
                 "INVALID_PAID_AMOUNT",
                 f"A cash sale must be paid in full: paid_amount must be {total}.",
             )
@@ -206,13 +206,13 @@ def _record_sale(
         paid = _money(body.paid_amount)
         if paid < 0:
             raise _error(
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
                 "INVALID_PAID_AMOUNT",
                 "paid_amount cannot be negative.",
             )
         if paid > total:
             raise _error(
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
                 "INVALID_PAID_AMOUNT",
                 f"paid_amount {paid} is larger than the sale total {total}.",
             )

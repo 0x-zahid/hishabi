@@ -27,6 +27,9 @@ export default function Navbar() {
         <NavLink to="/audit" className={({ isActive }) => (isActive ? 'active' : '')}>
           Audit Log
         </NavLink>
+        <NavLink to="/ai" className={({ isActive }) => (isActive ? 'active' : '')}>
+          AI Entry
+        </NavLink>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: '1rem' }}>
           <span className="user-badge">{user?.role?.name || user?.username || 'Owner'}</span>

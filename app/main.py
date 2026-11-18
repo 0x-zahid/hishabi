@@ -8,6 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.api.v1.ai import router as ai_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.audit import router as audit_router
 from app.api.v1.categories import router as categories_router
@@ -70,7 +71,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     loc = " -> ".join(str(l) for l in first_error.get("loc", []))
     detail_msg = f"{loc}: {msg}" if loc else msg
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content={"error": {"code": "VALIDATION_ERROR", "message": detail_msg}},
     )
 
@@ -95,6 +96,8 @@ app.include_router(customer_dues_router)
 app.include_router(customers_router)
 app.include_router(suppliers_router)
 app.include_router(purchases_router)
+# Module 3 (Zahid): AI Bangla entry.
+app.include_router(ai_router)
 # Module 3 (Azaz): reports, audit log and dashboard.
 app.include_router(reports_router)
 app.include_router(audit_router)

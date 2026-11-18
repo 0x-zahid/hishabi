@@ -218,6 +218,29 @@ recording who changed what.
 > has no due, balance or outstanding-amount column, so there is exactly one
 > source of truth.
 
+### 3.14 `ai_request_logs`
+
+| Column | Type | Null | Default | Key | Purpose |
+|---|---|---|---|---|---|
+| `id` | `INTEGER` | NO | identity | PK | Primary key |
+| `user_id` | `INTEGER` | NO | — | FK → `users.id` | Who made the AI request |
+| `input_text` | `TEXT` | NO | — | — | The raw Bangla sentence the user typed |
+| `ai_response` | `TEXT` | YES | NULL | — | The raw JSON the provider returned, kept for tracing |
+| `extracted_data` | `JSONB` | YES | NULL | — | The validated proposal, stored after the user reviewed it |
+| `status` | `VARCHAR(20)` | NO | — | — | `success`, `failed`, `quota_exceeded` or `provider_error` (CHECK constraint) |
+| `error_message` | `TEXT` | YES | NULL | — | Server-side detail about a failure; never sent to the client |
+| `confirmed` | `BOOLEAN` | NO | `false` | — | The proposal was confirmed and the sale was recorded |
+| `created_at` | `TIMESTAMP` | NO | `now()` | — | Request timestamp; the daily limit counts this local day |
+
+> [!NOTE]
+> One row is written for **every** AI request, whether or not the user
+> confirmed the proposal, so the daily limit cannot be bypassed by throwing a
+> proposal away. A request that the provider answered counts against the
+> limit; a provider outage does not, because the user got nothing from it.
+>
+> This table stores no customer due. Dues are computed from the sales and
+> payments tables so there is a single source of truth.
+
 ---
 
 ## 4. Foreign Keys
@@ -240,6 +263,7 @@ recording who changed what.
 | `payments.customer_id` | `customers.id` | RESTRICT | Payments must keep their customer history intact |
 | `payments.user_id` | `users.id` | SET NULL | Payments survive user deactivation |
 | `payments.sale_id` | `sales.id` | SET NULL | A sale is never deleted, but a payment may outlive its reference |
+| `ai_request_logs.user_id` | `users.id` | CASCADE | A request log belongs to the user who made it and is meaningless without them; `user_id` is NOT NULL, so the log goes with the user |
 
 **User deletion.** Users are deactivated (`is_active = false`) rather than hard-deleted, so
 `stock_movements` and `audit_logs` keep their referential history.
@@ -287,11 +311,15 @@ These also create backing indexes.
 | `payments` | `ix_payments_user_id` | (`user_id`) | FK column — payments taken by a user |
 | `payments` | `ix_payments_sale_id` | (`sale_id`) | FK column — payments tied to one sale |
 | `payments` | `ix_payments_created_at` | (`created_at`) | Time-range queries and recent-activity listings |
+| | `ai_request_logs` | `ix_ai_request_logs_user_id` | (`user_id`) | FK column — the AI requests of one user, and the daily limit count |
+| | `ai_request_logs` | `ix_ai_request_logs_created_at` | (`created_at`) | Time-range queries — counting today's requests |
+| | `ai_request_logs` | `ix_ai_request_logs_status` | (`status`) | Filtering the request history by outcome |
 
 ### 5.3 Check Constraints
 
 | Table | Constraint | Expression | Rationale |
 |---|---|---|---|
+| `ai_request_logs` | `ck_ai_request_logs_status_valid` | `status IN ('success','failed','quota_exceeded','provider_error')` | A request row only carries one of the four documented outcomes |
 | `purchases` | `ck_purchases_total_amount_non_negative` | `total_amount >= 0` | A purchase total cannot be negative |
 | `purchase_items` | `ck_purchase_items_quantity_positive` | `quantity > 0` | A line always carries a positive quantity |
 | `purchase_items` | `ck_purchase_items_unit_cost_non_negative` | `unit_cost >= 0` | A cost cannot be negative |
