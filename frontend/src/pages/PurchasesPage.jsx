@@ -255,7 +255,7 @@ export default function PurchasesPage() {
       setError('');
       const [supRes, prodRes, catRes] = await Promise.all([
         api.getSuppliers(),
-        api.getProducts({ limit: 200 }),
+        api.getProducts({ limit: 100 }),
         api.getCategories(),
       ]);
       const supItems = supRes?.items || [];
@@ -368,7 +368,7 @@ export default function PurchasesPage() {
       });
 
       // Refresh product list and update state
-      const prodRes = await api.getProducts({ limit: 200 });
+      const prodRes = await api.getProducts({ limit: 100 });
       const updatedList = prodRes?.items || [];
       setProducts(updatedList);
 
@@ -447,7 +447,7 @@ export default function PurchasesPage() {
       setPurchaseItems([{ product_id: '', quantity: '1', unit_cost: '' }]);
 
       // Refresh product stock list in background
-      api.getProducts({ limit: 200 }).then((res) => setProducts(res?.items || []));
+      api.getProducts({ limit: 100 }).then((res) => setProducts(res?.items || []));
     } catch (err) {
       setError(err.message || 'Failed to record purchase.');
     } finally {

@@ -203,7 +203,10 @@ export const api = {
   getProducts(params = {}) {
     const clean = {};
     Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && v !== '') clean[k] = v;
+      if (v !== undefined && v !== null && v !== '') {
+        if (k === 'limit') clean[k] = Math.min(Math.max(parseInt(v) || 50, 1), 100);
+        else clean[k] = v;
+      }
     });
     const qs = new URLSearchParams(clean).toString();
     return apiRequest(`/api/v1/products${qs ? `?${qs}` : ''}`);
@@ -249,7 +252,10 @@ export const api = {
   getCustomers(params = {}) {
     const clean = {};
     Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && v !== '') clean[k] = v;
+      if (v !== undefined && v !== null && v !== '') {
+        if (k === 'limit') clean[k] = Math.min(Math.max(parseInt(v) || 50, 1), 100);
+        else clean[k] = v;
+      }
     });
     const qs = new URLSearchParams(clean).toString();
     return apiRequest(`/api/v1/customers${qs ? `?${qs}` : ''}`);
@@ -260,7 +266,8 @@ export const api = {
   },
 
   getCustomerHistory(id, limit = 20) {
-    return apiRequest(`/api/v1/customers/${id}/history?limit=${limit}`);
+    const safeLimit = Math.min(Math.max(parseInt(limit) || 20, 1), 100);
+    return apiRequest(`/api/v1/customers/${id}/history?limit=${safeLimit}`);
   },
 
   createCustomer(data) {
@@ -287,7 +294,10 @@ export const api = {
   getSuppliers(params = {}) {
     const clean = {};
     Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && v !== '') clean[k] = v;
+      if (v !== undefined && v !== null && v !== '') {
+        if (k === 'limit') clean[k] = Math.min(Math.max(parseInt(v) || 50, 1), 100);
+        else clean[k] = v;
+      }
     });
     const qs = new URLSearchParams(clean).toString();
     return apiRequest(`/api/v1/suppliers${qs ? `?${qs}` : ''}`);
@@ -321,7 +331,10 @@ export const api = {
   getPurchases(params = {}) {
     const clean = {};
     Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && v !== '') clean[k] = v;
+      if (v !== undefined && v !== null && v !== '') {
+        if (k === 'limit') clean[k] = Math.min(Math.max(parseInt(v) || 50, 1), 100);
+        else clean[k] = v;
+      }
     });
     const qs = new URLSearchParams(clean).toString();
     return apiRequest(`/api/v1/purchases${qs ? `?${qs}` : ''}`);
