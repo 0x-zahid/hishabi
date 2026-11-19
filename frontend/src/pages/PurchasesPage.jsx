@@ -428,7 +428,7 @@ export default function PurchasesPage() {
 
       const payload = {
         supplier_id: parseInt(selectedSupplier),
-        invoice_number: invoiceNumber.trim() || null,
+        invoice_no: invoiceNumber.trim() || null,
         items: purchaseItems.map((it) => ({
           product_id: parseInt(it.product_id),
           quantity: parseFloat(it.quantity),
@@ -735,11 +735,11 @@ export default function PurchasesPage() {
                   {purchases.map((p) => (
                     <tr key={p.id}>
                       <td>#{p.id}</td>
-                      <td>{new Date(p.purchased_at).toLocaleDateString()}</td>
+                      <td>{new Date(p.created_at || p.purchased_at).toLocaleDateString()}</td>
                       <td>
                         <strong>{p.supplier_name || `Supplier #${p.supplier_id}`}</strong>
                       </td>
-                      <td>{p.invoice_number || '—'}</td>
+                      <td>{p.invoice_no || p.invoice_number || '—'}</td>
                       <td>{p.item_count || '—'} items</td>
                       <td>
                         <strong style={{ color: 'var(--primary)' }}>
@@ -1021,11 +1021,11 @@ export default function PurchasesPage() {
                 <h2>Purchase Voucher #{selectedPurchaseDetail.id}</h2>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                   Supplier: <strong>{selectedPurchaseDetail.supplier?.name}</strong> • Date:{' '}
-                  {new Date(selectedPurchaseDetail.purchased_at).toLocaleDateString()}
+                  {new Date(selectedPurchaseDetail.created_at || selectedPurchaseDetail.purchased_at).toLocaleDateString()}
                 </p>
-                {selectedPurchaseDetail.invoice_number && (
+                {(selectedPurchaseDetail.invoice_no || selectedPurchaseDetail.invoice_number) && (
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                    Invoice Ref: <code>{selectedPurchaseDetail.invoice_number}</code>
+                    Invoice Ref: <code>{selectedPurchaseDetail.invoice_no || selectedPurchaseDetail.invoice_number}</code>
                   </p>
                 )}
               </div>

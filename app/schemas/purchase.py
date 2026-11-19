@@ -16,7 +16,15 @@ from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_serializer, model_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    field_serializer,
+    model_validator,
+)
 
 MONEY_PLACES = Decimal("0.01")
 QUANTITY_PLACES = Decimal("0.001")
@@ -60,7 +68,10 @@ class PurchaseCreate(BaseModel):
 
     supplier_id: Annotated[int, Field(gt=0)]
     items: Annotated[list[PurchaseItemIn], Field(min_length=1, max_length=MAX_ITEMS_PER_PURCHASE)]
-    invoice_no: InvoiceNo | None = None
+    invoice_no: Annotated[
+        InvoiceNo | None,
+        Field(default=None, validation_alias=AliasChoices("invoice_no", "invoice_number")),
+    ] = None
     total_amount: TotalAmount | None = None
     note: PurchaseNote | None = None
 
