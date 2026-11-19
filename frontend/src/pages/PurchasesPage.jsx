@@ -1,5 +1,204 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { api } from '../api/client';
+
+/**
+ * Searchable & Writable Combobox for Products.
+ * Allows typing to search, selecting from live suggestions, or creating on the fly.
+ */
+function ProductSearchSelect({ products, selectedId, onSelect, onQuickAdd }) {
+  const [query, setQuery] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  const selectedProduct = products.find((p) => p.id === parseInt(selectedId));
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filtered = products.filter((p) => {
+    const q = query.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      p.name.toLowerCase().includes(q) ||
+      (p.unit || '').toLowerCase().includes(q) ||
+      p.id.toString() === q
+    );
+  });
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
+      <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+        <input
+          type="text"
+          className="form-input"
+          style={{
+            width: '100%',
+            fontWeight: selectedProduct && !isOpen ? 600 : 400,
+            background: selectedProduct && !isOpen ? '#f8fafc' : '#ffffff',
+          }}
+          value={
+            isOpen
+              ? query
+              : selectedProduct
+              ? `${selectedProduct.name} (${selectedProduct.current_stock} ${selectedProduct.unit})`
+              : query
+          }
+          placeholder="✍️ Type to search or choose product..."
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => {
+            setIsOpen(true);
+            setQuery('');
+          }}
+        />
+
+        {selectedProduct && (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ padding: '0.4rem 0.6rem', fontSize: '0.75rem', color: 'var(--danger)' }}
+            onClick={() => {
+              onSelect('');
+              setQuery('');
+            }}
+            title="Clear product"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
+      {isOpen && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            zIndex: 100,
+            maxHeight: '260px',
+            overflowY: 'auto',
+            background: '#ffffff',
+            border: '1px solid var(--border)',
+            borderRadius: '8px',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15)',
+            marginTop: '4px',
+          }}
+        >
+          {filtered.length === 0 ? (
+            <div style={{ padding: '1rem', fontSize: '0.88rem', color: 'var(--text-muted)', textAlign: 'center' }}>
+              <div>No existing product matches "{query}".</div>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ width: '100%', marginTop: '0.75rem', fontSize: '0.85rem', padding: '0.45rem' }}
+                onClick={() => {
+                  setIsOpen(false);
+                  onQuickAdd(query);
+                }}
+              >
+                + Create "{query}" as New Product
+              </button>
+            </div>
+          ) : (
+            filtered.map((p) => {
+              const isLow = parseFloat(p.current_stock) <= parseFloat(p.low_stock_threshold || 5);
+              return (
+                <div
+                  key={p.id}
+                  style={{
+                    padding: '0.6rem 0.85rem',
+                    cursor: 'pointer',
+                    borderBottom: '1px solid #f1f5f9',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    background: selectedProduct?.id === p.id ? '#eff6ff' : 'transparent',
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (selectedProduct?.id !== p.id) e.currentTarget.style.background = '#f8fafc';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (selectedProduct?.id !== p.id) e.currentTarget.style.background = 'transparent';
+                  }}
+                  onMouseDown={() => {
+                    onSelect(p.id.toString());
+                    setIsOpen(false);
+                    setQuery('');
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.92rem' }}>{p.name}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                      Cost: ৳{parseFloat(p.purchase_price || 0).toFixed(2)} • Sell: ৳{parseFloat(p.sale_price).toFixed(2)}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <span
+                      style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        background: isLow ? '#fee2e2' : '#ecfdf5',
+                        color: isLow ? '#b91c1c' : '#047857',
+                      }}
+                    >
+                      {p.current_stock} {p.unit}
+                    </span>
+                  </div>
+                </div>
+              );
+            })
+          )}
+
+          <div
+            style={{
+              padding: '0.5rem 0.85rem',
+              background: '#f8fafc',
+              borderTop: '1px solid var(--border)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              Showing {filtered.length} products
+            </span>
+            <button
+              type="button"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--primary)',
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+              onClick={() => {
+                setIsOpen(false);
+                onQuickAdd(query);
+              }}
+            >
+              + Quick Add Product
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function PurchasesPage() {
   const [activeTab, setActiveTab] = useState('record'); // 'record' | 'suppliers' | 'history'
@@ -7,6 +206,7 @@ export default function PurchasesPage() {
   // Data
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -32,22 +232,40 @@ export default function PurchasesPage() {
   const [supplierSubmitting, setSupplierSubmitting] = useState(false);
   const [supplierFormError, setSupplierFormError] = useState('');
 
+  // Quick Product Modal State
+  const [showQuickProductModal, setShowQuickProductModal] = useState(false);
+  const [quickProductTargetIndex, setQuickProductTargetIndex] = useState(null);
+  const [quickProductForm, setQuickProductForm] = useState({
+    name: '',
+    category_id: '',
+    unit: 'kg',
+    purchase_price: '0.00',
+    sale_price: '0.00',
+  });
+  const [quickProductSubmitting, setQuickProductSubmitting] = useState(false);
+  const [quickProductError, setQuickProductError] = useState('');
+
   // Selected Purchase for Detail Modal
   const [selectedPurchaseDetail, setSelectedPurchaseDetail] = useState(null);
 
-  // Load initial suppliers & products
+  // Load initial suppliers, products & categories
   const loadInitialData = async () => {
     try {
       setLoading(true);
       setError('');
-      const [supRes, prodRes] = await Promise.all([
+      const [supRes, prodRes, catRes] = await Promise.all([
         api.getSuppliers(),
-        api.getProducts({ limit: 100 }),
+        api.getProducts({ limit: 200 }),
+        api.getCategories(),
       ]);
-      setSuppliers(supRes?.items || []);
-      setProducts(prodRes?.items || []);
-      if (supRes?.items?.length > 0 && !selectedSupplier) {
-        setSelectedSupplier(supRes.items[0].id.toString());
+      const supItems = supRes?.items || [];
+      const prodItems = prodRes?.items || [];
+      setSuppliers(supItems);
+      setProducts(prodItems);
+      setCategories(catRes?.items || catRes || []);
+
+      if (supItems.length > 0 && !selectedSupplier) {
+        setSelectedSupplier(supItems[0].id.toString());
       }
     } catch (err) {
       setError(err.message || 'Failed to load initial data');
@@ -85,7 +303,7 @@ export default function PurchasesPage() {
   const handleAddItem = () => {
     setPurchaseItems([
       ...purchaseItems,
-      { product_id: products[0]?.id?.toString() || '', quantity: '1', unit_cost: '' },
+      { product_id: '', quantity: '1', unit_cost: '' },
     ]);
   };
 
@@ -98,15 +316,73 @@ export default function PurchasesPage() {
     const updated = [...purchaseItems];
     updated[index][field] = value;
 
-    // Auto-fill cost price if product changed and cost was empty
+    // Auto-fill cost price when product is selected
     if (field === 'product_id') {
       const prod = products.find((p) => p.id === parseInt(value));
-      if (prod && !updated[index].unit_cost) {
-        updated[index].unit_cost = prod.purchase_price || '0';
+      if (prod) {
+        updated[index].unit_cost = prod.purchase_price || '0.00';
       }
     }
 
     setPurchaseItems(updated);
+  };
+
+  // Open Quick Product Creator
+  const handleOpenQuickProduct = (suggestedName = '', rowIndex = null) => {
+    setQuickProductTargetIndex(rowIndex);
+    setQuickProductForm({
+      name: suggestedName || '',
+      category_id: categories[0]?.id?.toString() || '',
+      unit: 'kg',
+      purchase_price: '0.00',
+      sale_price: '0.00',
+    });
+    setQuickProductError('');
+    setShowQuickProductModal(true);
+  };
+
+  // Save Quick Product
+  const handleSaveQuickProduct = async (e) => {
+    e.preventDefault();
+    if (!quickProductForm.name.trim()) {
+      setQuickProductError('Product name is required.');
+      return;
+    }
+    if (!quickProductForm.sale_price || parseFloat(quickProductForm.sale_price) <= 0) {
+      setQuickProductError('Sale price must be greater than 0.');
+      return;
+    }
+
+    try {
+      setQuickProductSubmitting(true);
+      setQuickProductError('');
+
+      const newProd = await api.createProduct({
+        name: quickProductForm.name.trim(),
+        category_id: quickProductForm.category_id ? parseInt(quickProductForm.category_id) : null,
+        unit: quickProductForm.unit.trim() || 'kg',
+        purchase_price: parseFloat(quickProductForm.purchase_price || 0),
+        sale_price: parseFloat(quickProductForm.sale_price),
+        current_stock: 0,
+        low_stock_threshold: 5,
+      });
+
+      // Refresh product list and update state
+      const prodRes = await api.getProducts({ limit: 200 });
+      const updatedList = prodRes?.items || [];
+      setProducts(updatedList);
+
+      // If opened from a line item, auto-select it!
+      if (quickProductTargetIndex !== null && quickProductTargetIndex >= 0) {
+        handleItemChange(quickProductTargetIndex, 'product_id', newProd.id.toString());
+      }
+
+      setShowQuickProductModal(false);
+    } catch (err) {
+      setQuickProductError(err.message || 'Failed to create product');
+    } finally {
+      setQuickProductSubmitting(false);
+    }
   };
 
   // Compute Grand Total
@@ -132,7 +408,7 @@ export default function PurchasesPage() {
     for (let i = 0; i < purchaseItems.length; i++) {
       const it = purchaseItems[i];
       if (!it.product_id) {
-        setError(`Please select a product for line #${i + 1}.`);
+        setError(`Please select or write a product for line #${i + 1}.`);
         return;
       }
       if (!it.quantity || parseFloat(it.quantity) <= 0) {
@@ -164,14 +440,14 @@ export default function PurchasesPage() {
       const result = await api.createPurchase(payload);
 
       setSuccessMsg(
-        `Purchase #${result.id} recorded successfully! Stock has been updated automatically.`
+        `Purchase #${result.id} recorded successfully! Stock has been automatically updated in inventory.`
       );
       // Reset form
       setInvoiceNumber('');
-      setPurchaseItems([{ product_id: products[0]?.id?.toString() || '', quantity: '1', unit_cost: '' }]);
+      setPurchaseItems([{ product_id: '', quantity: '1', unit_cost: '' }]);
 
       // Refresh product stock list in background
-      api.getProducts({ limit: 100 }).then((res) => setProducts(res?.items || []));
+      api.getProducts({ limit: 200 }).then((res) => setProducts(res?.items || []));
     } catch (err) {
       setError(err.message || 'Failed to record purchase.');
     } finally {
@@ -219,9 +495,14 @@ export default function PurchasesPage() {
           <h1 className="page-title">Purchases &amp; Supplier Management</h1>
           <p className="page-subtitle">Module 2 (Azaz - 237): Record incoming goods, vendors, and auto-increment stock.</p>
         </div>
-        <button className="btn btn-secondary" onClick={() => setShowSupplierModal(true)}>
-          + Add New Supplier
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <button className="btn btn-secondary" onClick={() => handleOpenQuickProduct('', null)}>
+            + Quick Add Product
+          </button>
+          <button className="btn btn-secondary" onClick={() => setShowSupplierModal(true)}>
+            + Add New Supplier
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -252,9 +533,14 @@ export default function PurchasesPage() {
       {/* TAB 1: RECORD NEW PURCHASE */}
       {activeTab === 'record' && (
         <div className="card" style={{ padding: '2rem' }}>
-          <h2 style={{ fontSize: '1.25rem', marginBottom: '1.25rem', fontWeight: 700 }}>
-            Inward Stock Entry (Purchase Voucher)
-          </h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>
+              Inward Stock Entry (Purchase Voucher)
+            </h2>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              Catalog: <strong>{products.length} products</strong> available
+            </span>
+          </div>
 
           {suppliers.length === 0 ? (
             <div className="state-box">
@@ -296,62 +582,77 @@ export default function PurchasesPage() {
               </div>
 
               {/* Items Table */}
-              <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}>Purchase Line Items</h3>
-              <div className="table-container" style={{ marginBottom: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: 0 }}>Purchase Line Items</h3>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  ✍️ Tip: You can type in the product box to search or create a new item directly.
+                </span>
+              </div>
+
+              <div className="table-container" style={{ marginBottom: '1.25rem', overflow: 'visible' }}>
                 <table>
                   <thead>
                     <tr>
-                      <th style={{ width: '45%' }}>Product *</th>
-                      <th style={{ width: '20%' }}>Quantity *</th>
-                      <th style={{ width: '20%' }}>Unit Cost (BDT) *</th>
-                      <th style={{ width: '15%', textAlign: 'right' }}>Line Total (BDT)</th>
-                      <th></th>
+                      <th style={{ width: '48%' }}>Product (Search / Write / Choose) *</th>
+                      <th style={{ width: '18%' }}>Quantity *</th>
+                      <th style={{ width: '18%' }}>Unit Cost (BDT) *</th>
+                      <th style={{ width: '16%', textAlign: 'right' }}>Line Total (BDT)</th>
+                      <th style={{ width: '40px' }}></th>
                     </tr>
                   </thead>
                   <tbody>
                     {purchaseItems.map((item, idx) => {
                       const lineTotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_cost) || 0);
+                      const selectedProd = products.find((p) => p.id === parseInt(item.product_id));
+
                       return (
                         <tr key={idx}>
                           <td>
-                            <select
-                              className="form-select"
-                              value={item.product_id}
-                              onChange={(e) => handleItemChange(idx, 'product_id', e.target.value)}
-                              required
-                            >
-                              <option value="">-- Choose Product --</option>
-                              {products.map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  {p.name} (Current Stock: {p.current_stock} {p.unit})
-                                </option>
-                              ))}
-                            </select>
+                            <ProductSearchSelect
+                              products={products}
+                              selectedId={item.product_id}
+                              onSelect={(val) => handleItemChange(idx, 'product_id', val)}
+                              onQuickAdd={(name) => handleOpenQuickProduct(name, idx)}
+                            />
+                            {selectedProd && (
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                                Unit: <strong>{selectedProd.unit}</strong> • In-Stock:{' '}
+                                <strong>{selectedProd.current_stock}</strong>
+                              </div>
+                            )}
                           </td>
                           <td>
-                            <input
-                              type="number"
-                              step="0.001"
-                              min="0.001"
-                              className="form-input"
-                              value={item.quantity}
-                              onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                              required
-                            />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                              <input
+                                type="number"
+                                step="0.001"
+                                min="0.001"
+                                className="form-input"
+                                value={item.quantity}
+                                onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
+                                required
+                              />
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', minWidth: '24px' }}>
+                                {selectedProd?.unit || 'qty'}
+                              </span>
+                            </div>
                           </td>
                           <td>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              className="form-input"
-                              value={item.unit_cost}
-                              onChange={(e) => handleItemChange(idx, 'unit_cost', e.target.value)}
-                              placeholder="0.00"
-                              required
-                            />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>৳</span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                className="form-input"
+                                value={item.unit_cost}
+                                onChange={(e) => handleItemChange(idx, 'unit_cost', e.target.value)}
+                                placeholder="0.00"
+                                required
+                              />
+                            </div>
                           </td>
-                          <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                          <td style={{ textAlign: 'right', fontWeight: 600, fontSize: '0.95rem' }}>
                             ৳{lineTotal.toFixed(2)}
                           </td>
                           <td style={{ textAlign: 'center' }}>
@@ -359,9 +660,9 @@ export default function PurchasesPage() {
                               <button
                                 type="button"
                                 className="btn btn-secondary"
-                                style={{ padding: '0.2rem 0.5rem', color: 'var(--danger)', borderColor: '#fca5a5' }}
+                                style={{ padding: '0.25rem 0.5rem', color: 'var(--danger)', borderColor: '#fca5a5' }}
                                 onClick={() => handleRemoveItem(idx)}
-                                title="Remove item"
+                                title="Remove line item"
                               >
                                 ✕
                               </button>
@@ -377,11 +678,15 @@ export default function PurchasesPage() {
               {/* Add Item & Grand Total Bar */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <button type="button" className="btn btn-secondary" onClick={handleAddItem}>
-                  + Add Another Product
+                  + Add Another Product Line
                 </button>
-                <div style={{ fontSize: '1.3rem', fontWeight: 800 }}>
-                  Grand Total:{' '}
-                  <span style={{ color: 'var(--primary)' }}>৳{grandTotal.toFixed(2)}</span>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    Total Lines: <strong>{purchaseItems.length}</strong>
+                  </div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>
+                    Grand Total: <span style={{ color: 'var(--primary)' }}>৳{grandTotal.toFixed(2)}</span>
+                  </div>
                 </div>
               </div>
 
@@ -516,6 +821,108 @@ export default function PurchasesPage() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Modal: Quick Add Product (Write Option) */}
+      {showQuickProductModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '500px' }}>
+            <h2 style={{ marginBottom: '0.5rem' }}>+ Quick Add New Product</h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
+              Create a new catalog item immediately without leaving the purchase screen.
+            </p>
+
+            {quickProductError && <div className="error-banner">{quickProductError}</div>}
+
+            <form onSubmit={handleSaveQuickProduct}>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label">Product Name *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={quickProductForm.name}
+                  onChange={(e) => setQuickProductForm({ ...quickProductForm, name: e.target.value })}
+                  placeholder="e.g. প্রাণ গুঁড়া মসলা (Pran Spices)"
+                  required
+                  autoFocus
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Category</label>
+                  <select
+                    className="form-select"
+                    value={quickProductForm.category_id}
+                    onChange={(e) => setQuickProductForm({ ...quickProductForm, category_id: e.target.value })}
+                  >
+                    <option value="">No Category</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Unit of Measure *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={quickProductForm.unit}
+                    onChange={(e) => setQuickProductForm({ ...quickProductForm, unit: e.target.value })}
+                    placeholder="kg, pcs, pkt, can"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Cost Price (BDT)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="form-input"
+                    value={quickProductForm.purchase_price}
+                    onChange={(e) => setQuickProductForm({ ...quickProductForm, purchase_price: e.target.value })}
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Selling Price (BDT) *</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    className="form-input"
+                    value={quickProductForm.sale_price}
+                    onChange={(e) => setQuickProductForm({ ...quickProductForm, sale_price: e.target.value })}
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowQuickProductModal(false)}
+                  disabled={quickProductSubmitting}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={quickProductSubmitting}>
+                  {quickProductSubmitting ? 'Creating...' : 'Create & Select Product'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
