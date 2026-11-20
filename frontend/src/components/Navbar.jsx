@@ -30,6 +30,18 @@ export default function Navbar() {
         <NavLink to="/ai" className={({ isActive }) => (isActive ? 'active' : '')}>
           AI Entry
         </NavLink>
+        <NavLink to="/products" className={({ isActive }) => (isActive ? 'active' : '')}>
+          Products
+        </NavLink>
+        <NavLink to="/customers" className={({ isActive }) => (isActive ? 'active' : '')}>
+          Customers
+        </NavLink>
+        <NavLink to="/sales" className={({ isActive }) => (isActive ? 'active' : '')}>
+          Sales
+        </NavLink>
+        <NavLink to="/suppliers" className={({ isActive }) => (isActive ? 'active' : '')}>
+          Suppliers
+        </NavLink>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: '1rem' }}>
           <span className="user-badge">{user?.role?.name || user?.username || 'Owner'}</span>
