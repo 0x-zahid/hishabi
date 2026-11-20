@@ -6,6 +6,10 @@ import DashboardPage from './pages/DashboardPage';
 import ReportsPage from './pages/ReportsPage';
 import AuditLogPage from './pages/AuditLogPage';
 import AIEntryPage from './pages/AIEntryPage';
+import ProductsPage from './pages/ProductsPage';
+import CustomersPage from './pages/CustomersPage';
+import SalesPage from './pages/SalesPage';
+import SuppliersPage from './pages/SuppliersPage';
 import { authStorage } from './api/client';
 import './App.css';
 
@@ -98,6 +102,44 @@ export default function App() {
           element={
             <ProtectedRoute allow={['owner', 'staff']}>
               <AIEntryPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Management pages. Staff work the counter, so they can record a
+            sale, a customer, a product and a supplier without an owner. */}
+        <Route
+          path="/products"
+          element={
+            <ProtectedRoute allow={['owner', 'staff']}>
+              <ProductsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/customers"
+          element={
+            <ProtectedRoute allow={['owner', 'staff']}>
+              <CustomersPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/sales"
+          element={
+            <ProtectedRoute allow={['owner', 'staff']}>
+              <SalesPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/suppliers"
+          element={
+            <ProtectedRoute allow={['owner', 'staff']}>
+              <SuppliersPage />
             </ProtectedRoute>
           }
         />
