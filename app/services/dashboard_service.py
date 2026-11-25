@@ -60,7 +60,7 @@ def get_dashboard_summary(db: Session) -> DashboardSummaryOut:
     )
     # Fetch recent stock movements
     recent_movements = (
-        db.query(StockMovement, Product.name)
+        db.query(StockMovement, Product)
         .join(Product, StockMovement.product_id == Product.id)
         .order_by(StockMovement.created_at.desc(), StockMovement.id.desc())
         .limit(10)
@@ -80,16 +80,24 @@ def get_dashboard_summary(db: Session) -> DashboardSummaryOut:
             )
         )
 
-    for mov, prod_name in recent_movements:
+    for mov, prod in recent_movements:
         # Ignore purchase stock movements to avoid duplicating the purchase record
         if mov.reference_type == "purchase":
             continue
+        
+        if mov.movement_type == "sale":
+            tx_type = "sale"
+            tx_amount = mov.quantity * prod.sale_price
+        else:
+            tx_type = f"stock_{mov.movement_type or 'movement'}"
+            tx_amount = mov.quantity
+
         transactions.append(
             RecentTransactionItem(
                 id=mov.id,
-                transaction_type=f"stock_{mov.movement_type or 'movement'}",
-                reference_name=prod_name,
-                amount=mov.quantity,
+                transaction_type=tx_type,
+                reference_name=prod.name,
+                amount=tx_amount,
                 created_at=mov.created_at,
             )
         )

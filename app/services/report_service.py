@@ -14,6 +14,7 @@ stock movements (movement_type='sale') and products, returning clean 0 values
 when no sales exist.
 """
 
+import re
 from calendar import monthrange
 from datetime import date, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
@@ -226,26 +227,38 @@ def get_monthly_sales_report(db: Session, year: int, month: int) -> MonthlySales
 # ---------------------------------------------------------------------------
 
 
+def _extract_customer_due(cust: Customer) -> Decimal:
+    """Extract due balance from note if present (e.g. '1000' or 'due: 1500')."""
+    if not cust.note:
+        return Decimal("0.00")
+    m = re.search(r"\b\d+(\.\d{1,2})?\b", cust.note)
+    if m:
+        try:
+            return Decimal(m.group(0))
+        except Exception:
+            return Decimal("0.00")
+    return Decimal("0.00")
+
+
 def get_due_report(db: Session) -> DueReportOut:
     """Return total outstanding customer dues and individual customer breakdown."""
     customers = db.query(Customer).order_by(Customer.name.asc()).all()
 
-    # If payments/dues tables exist, calculate real balance
-    # For now, each customer has 0 due until sales/payments are recorded
     items = []
     total_due = Decimal("0.00")
 
     for cust in customers:
+        due_val = _extract_customer_due(cust)
         item = CustomerDueItem(
             customer_id=cust.id,
             customer_name=cust.name,
             phone=cust.phone,
-            total_sales=Decimal("0.00"),
+            total_sales=_money(due_val),
             total_paid=Decimal("0.00"),
-            current_due=Decimal("0.00"),
+            current_due=_money(due_val),
         )
         items.append(item)
-        total_due += item.current_due
+        total_due += due_val
 
     return DueReportOut(
         total_due_amount=_money(total_due),

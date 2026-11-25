@@ -6,6 +6,16 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Quick Sale modal state
+  const [showSaleModal, setShowSaleModal] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [selectedProductId, setSelectedProductId] = useState('');
+  const [saleQty, setSaleQty] = useState('1');
+  const [saleNote, setSaleNote] = useState('');
+  const [submittingSale, setSubmittingSale] = useState(false);
+  const [saleSuccessMsg, setSaleSuccessMsg] = useState('');
+  const [saleErrorMsg, setSaleErrorMsg] = useState('');
+
   const loadSummary = async () => {
     try {
       setLoading(true);
@@ -22,6 +32,67 @@ export default function DashboardPage() {
   useEffect(() => {
     loadSummary();
   }, []);
+
+  const openSaleModal = async () => {
+    setShowSaleModal(true);
+    setSaleErrorMsg('');
+    try {
+      const res = await api.getProducts({ limit: 100 });
+      const activeProducts = (res?.items || []).filter((p) => p.is_active);
+      setProducts(activeProducts);
+      if (activeProducts.length > 0 && !selectedProductId) {
+        setSelectedProductId(activeProducts[0].id.toString());
+      }
+    } catch (err) {
+      setSaleErrorMsg('Failed to load products list.');
+    }
+  };
+
+  const handleSaleSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedProductId) {
+      setSaleErrorMsg('Please select a product.');
+      return;
+    }
+    const qtyNum = parseFloat(saleQty);
+    if (!qtyNum || qtyNum <= 0) {
+      setSaleErrorMsg('Quantity must be greater than 0.');
+      return;
+    }
+    const prod = products.find((p) => p.id === parseInt(selectedProductId));
+    if (prod && qtyNum > parseFloat(prod.current_stock)) {
+      setSaleErrorMsg(`Insufficient stock. Only ${prod.current_stock} ${prod.unit} available.`);
+      return;
+    }
+
+    try {
+      setSubmittingSale(true);
+      setSaleErrorMsg('');
+      await api.recordStockMovement({
+        product_id: parseInt(selectedProductId),
+        movement_type: 'sale',
+        quantity: qtyNum,
+        note: saleNote.trim() || 'Retail cash sale',
+      });
+      setSaleSuccessMsg(
+        `Sale recorded successfully! ${qtyNum} ${prod?.unit || 'unit(s)'} of ${prod?.name} deducted from inventory.`
+      );
+      setShowSaleModal(false);
+      setSaleQty('1');
+      setSaleNote('');
+      await loadSummary();
+    } catch (err) {
+      setSaleErrorMsg(err.message || 'Failed to record sale.');
+    } finally {
+      setSubmittingSale(false);
+    }
+  };
+
+  const selectedProduct = products.find((p) => p.id === parseInt(selectedProductId));
+  const calculatedSaleTotal =
+    selectedProduct && parseFloat(saleQty) > 0
+      ? (parseFloat(saleQty) * parseFloat(selectedProduct.sale_price)).toFixed(2)
+      : '0.00';
 
   if (loading) {
     return (
@@ -45,10 +116,26 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="page-header">
-        <h1 className="page-title">Owner Dashboard</h1>
-        <p className="page-subtitle">Real-time overview of your shop's operations</p>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h1 className="page-title">Owner Dashboard</h1>
+          <p className="page-subtitle">Real-time overview of your shop's operations (Module 3 - Azaz 237)</p>
+        </div>
+        <button
+          onClick={openSaleModal}
+          className="btn btn-primary"
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.2rem', fontSize: '0.95rem' }}
+        >
+          <span style={{ fontSize: '1.1rem' }}>⚡</span> + Record Quick Sale
+        </button>
       </div>
+
+      {saleSuccessMsg && (
+        <div className="success-banner" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>✓ {saleSuccessMsg}</span>
+          <button onClick={() => setSaleSuccessMsg('')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: 'inherit' }}>×</button>
+        </div>
+      )}
 
       {/* Top Metric Cards */}
       <div className="grid-cards">
@@ -157,6 +244,102 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Quick Sale Modal */}
+      {showSaleModal && (
+        <div className="modal-overlay" onClick={() => !submittingSale && setShowSaleModal(false)}>
+          <div className="modal-content" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>⚡ Record Quick Retail Sale</h2>
+              <button
+                onClick={() => !submittingSale && setShowSaleModal(false)}
+                style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer' }}
+              >
+                ×
+              </button>
+            </div>
+
+            {saleErrorMsg && <div className="error-banner" style={{ marginBottom: '1rem' }}>{saleErrorMsg}</div>}
+
+            <form onSubmit={handleSaleSubmit}>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label className="form-label" style={{ fontWeight: 600 }}>Select Product *</label>
+                <select
+                  className="form-control"
+                  value={selectedProductId}
+                  onChange={(e) => setSelectedProductId(e.target.value)}
+                  required
+                >
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} (Stock: {p.current_stock} {p.unit} • Price: ৳{p.sale_price})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 600 }}>
+                    Quantity ({selectedProduct?.unit || 'qty'}) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0.001"
+                    step="any"
+                    className="form-control"
+                    value={saleQty}
+                    onChange={(e) => setSaleQty(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontWeight: 600 }}>Unit Price (BDT)</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={selectedProduct ? `৳${selectedProduct.sale_price}` : '৳0.00'}
+                    readOnly
+                    disabled
+                  />
+                </div>
+              </div>
+
+              <div style={{ background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '6px', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Calculated Total:</span>
+                <span style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--primary)' }}>
+                  ৳{calculatedSaleTotal}
+                </span>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label className="form-label">Note / Invoice (Optional)</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="e.g. Retail cash sale"
+                  value={saleNote}
+                  onChange={(e) => setSaleNote(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  disabled={submittingSale}
+                  onClick={() => setShowSaleModal(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={submittingSale}>
+                  {submittingSale ? 'Processing...' : 'Confirm Sale & Deduct Stock'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

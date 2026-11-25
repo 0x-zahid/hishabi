@@ -350,4 +350,12 @@ export const api = {
       body: JSON.stringify(data),
     });
   },
+
+  // Stock Movements & Quick Sales
+  recordStockMovement(data) {
+    return apiRequest('/api/v1/stock-movements', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
 };
